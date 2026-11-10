@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>骑手助手</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 高德地图 JS API：key 和安全密钥请到 https://console.amap.com 免费申请后替换 -->
+    <script>
+        window._AMapSecurityConfig = { securityJsCode: 'c5ac9410f51d27fb28528b836723e1ac' };
+    </script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key=08542e5627da592f50a38547824a5920"></script>
+</head>
+<body>
+    <button id="menuBtn" class="icon-btn" aria-label="打开菜单">☰</button>
+
+    <!-- 左侧抽屉菜单 -->
+    <div id="drawer" class="drawer">
+        <nav class="drawer-nav">
+            <a href="#" data-page="map" class="nav-item active">
+                <img src="assets/images/assets-icons-ditu.png" alt="" class="nav-icon"> 地图
+            </a>
+            <a href="#" data-page="merchants" class="nav-item">
+                <img src="assets/images/assets-ScreenShot_2026-10-11_053907_302.png" alt="" class="nav-icon"> 商家管理
+            </a>
+            <a href="#" data-page="level" class="nav-item">
+                <img src="assets/images/assets-icons-ds.svg" alt="" class="nav-icon"> 等级录入
+            </a>
+            <a href="#" data-page="records" class="nav-item">
+                <img src="assets/images/assets-id-qishou.svg" alt="" class="nav-icon"> 跑单记录
+            </a>
+            <a href="#" data-page="marks" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">📌</span> 标注管理
+            </a>
+            <a href="#" data-page="settings" class="nav-item">
+                <span class="nav-icon" aria-hidden="true">⚙</span> 设置
+            </a>
+        </nav>
+    </div>
+    <div id="drawerMask" class="drawer-mask"></div>
+
+    <!-- 主内容区 -->
+    <main id="mainContent">
+        <!-- 地图页 -->
+        <div id="page-map" class="page active">
+            <div id="mapContainer"></div>
+            <details class="main-map-tools">
+                <summary class="main-map-tools-toggle">工具</summary>
+                <div class="main-map-tools-panel">
+                    <div class="main-map-zone-controls" role="group" aria-label="地图区域和路线工具">
+                        <button id="mainMapRectangleStartBtn" type="button" aria-label="绘制矩形" title="绘制矩形">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="4" y="5" width="16" height="14" rx="1" />
+                            </svg>
+                        </button>
+                        <button id="mainMapPolygonStartBtn" type="button" aria-label="绘制多边形" title="绘制多边形">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 3 21 9l-3 11H6L3 9z" />
+                            </svg>
+                        </button>
+                        <span id="mainMapRectangleHint" hidden></span>
+                        <button id="mainMapRectangleFinishBtn" type="button" hidden disabled>完成</button>
+                        <button id="mainMapRectangleCancelBtn" type="button" hidden>取消</button>
+                        <button id="mainMapRouteToggleBtn" type="button" aria-expanded="false" aria-controls="mainMapRoutePanel">路线</button>
+                    </div>
+                </div>
+                <section id="mainMapRoutePanel" class="main-map-route-panel" aria-label="骑行和驾车路线规划" hidden>
+                <header class="main-map-route-header">
+                    <strong>路线规划</strong>
+                    <button id="mainMapRouteCloseBtn" type="button" aria-label="关闭路线规划">×</button>
+                </header>
+                <div class="main-map-route-modes" role="group" aria-label="出行方式">
+                    <button type="button" data-main-route-mode="riding" aria-pressed="true">骑行</button>
+                    <button type="button" data-main-route-mode="driving" aria-pressed="false">驾车</button>
+                </div>
+                <div class="main-map-route-endpoints">
+                    <div class="main-map-route-point">
+                        <span>起点</span>
+                        <button id="mainMapRouteOriginBtn" type="button" aria-pressed="false">在地图上选起点</button>
+                        <button id="mainMapRouteCurrentBtn" type="button">当前位置</button>
+                    </div>
+                    <div class="main-map-route-point">
+                        <span>终点</span>
+                        <button id="mainMapRouteDestinationBtn" type="button" aria-pressed="false">在地图上选终点</button>
+                    </div>
+                </div>
+                <div class="main-map-route-actions">
+                    <button id="mainMapRoutePlanBtn" type="button">开始规划</button>
+                    <button id="mainMapRouteClearBtn" type="button">重置</button>
+                </div>
+                <p id="mainMapRouteStatus" role="status">请选择起点和终点，也可以将当前位置设为起点。</p>
+                </section>
+            </details>
+            <div class="main-map-quick-controls" role="group" aria-label="地图快捷控制">
+                <button id="mapTypeToggleBtn" class="map-type-toggle" type="button" aria-pressed="false" aria-label="切换到卫星地图">
+                    <img src="assets/images/assets-icons-weix.png" alt="" aria-hidden="true">
+                    <span>卫星</span>
+                </button>
+                <button id="map3dToggleBtn" class="map-type-toggle map-3d-toggle" type="button" aria-pressed="false" aria-label="切换到3D视图">
+                    <span>3D</span>
+                </button>
+                <button id="mainMapLabelsToggleBtn" class="map-type-toggle map-labels-toggle" type="button" aria-pressed="false" aria-label="开启高德地图兴趣点标注" title="显示高德地图自带的兴趣点标注（包含多个类别）">
+                    <span>标注</span>
+                </button>
+                <button id="mainMapRotationToggleBtn" class="map-type-toggle map-rotation-toggle" type="button" aria-pressed="false" aria-label="开启地图旋转" title="开启地图旋转">
+                    <span>旋转</span>
+                </button>
+                <button id="mapLocateBtn" class="map-locate-btn" type="button" aria-label="定位到当前位置" title="定位到当前位置">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
+                        <circle cx="12" cy="12" r="7" />
+                        <circle cx="12" cy="12" r="2" />
+                    </svg>
+                    <span>定位</span>
+                </button>
+            </div>
+            <button id="addMarkBtn" class="add-mark-btn" type="button" aria-label="开启新增标注" aria-pressed="false" title="开启后点击地图添加标注">
+                <svg viewBox="0 0 32 32" aria-hidden="true">
+                    <path d="M16 29s10-9.1 10-17A10 10 0 1 0 6 12c0 7.9 10 17 10 17Z" />
+                    <path d="M16 7v10m-5-5h10" />
+                </svg>
+                <span>新增标注</span>
+            </button>
+            <aside id="mapHeightIndicator" class="map-height-indicator" aria-live="polite">
+                <span>视野高度</span>
+                <strong id="mapHeightValue">计算中…</strong>
+                <small>标签隐藏阈值 <b id="mapHideHeightValue">-- 米</b></small>
+            </aside>
+            <div class="map-zoom-controls" role="group" aria-label="地图缩放">
+                <button id="mapZoomInBtn" type="button" aria-label="放大地图" title="放大">+</button>
+                <button id="mapZoomOutBtn" type="button" aria-label="缩小地图" title="缩小">−</button>
+            </div>
+            <div id="safetyHintLayer" class="safety-hint-layer" aria-hidden="true">
+                <section class="safety-hint-panel" role="dialog" aria-modal="true" aria-labelledby="safetyHintTitle">
+                    <div class="safety-hint-hero">
+                        <img class="safety-hint-image" src="assets/images/assets-id-ScreenShot_2026-10-02_181613_608.png" alt="戴头盔的骑行者在公路上行驶">
+                        <span class="safety-hint-eyebrow">SAFETY FIRST <i></i> 安全出行</span>
+                    </div>
+                    <div class="safety-hint-copy">
+                        <h2 id="safetyHintTitle">温馨提示</h2>
+                        <p>减速慢行，注意安全</p>
+                        <p class="safety-hint-disclaimer">本应用仅供个人跑单参考使用，标注信息不代表官方地图数据，也不用于公开传播或商业用途。请勿标注涉密、敏感地点。</p>
+                        <button id="safetyHintDismiss" class="safety-hint-dismiss" type="button">开始使用 <span aria-hidden="true">→</span></button>
+                    </div>
+                </section>
+            </div>
+            <section id="mainMapZoneNameDialog" class="merchant-add-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="mainMapZoneNameTitle">
+                <form id="mainMapZoneNameForm" class="merchant-add-card">
+                    <header class="merchant-add-header">
+                        <div>
+                            <span class="merchant-add-eyebrow">MAP AREA</span>
+                            <h2 id="mainMapZoneNameTitle">命名地图区域</h2>
+                        </div>
+                        <button id="mainMapZoneNameClose" class="merchant-add-close" type="button" aria-label="取消">×</button>
+                    </header>
+                    <label class="merchant-add-field" for="mainMapZoneNameInput">
+                        区域名称
+                        <input id="mainMapZoneNameInput" type="text" maxlength="40" placeholder="请输入区域名称" required>
+                    </label>
+                    <div class="merchant-add-actions">
+                        <button id="mainMapZoneNameCancel" type="button">取消</button>
+                        <button type="submit">保存</button>
+                    </div>
+                </form>
+            </section>
+            <section id="mainMapZoneManagerDialog" class="merchant-add-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="mainMapZoneManagerTitle">
+                <div class="merchant-add-card">
+                    <header class="merchant-add-header">
+                        <div>
+                            <span class="merchant-add-eyebrow">MAP AREA</span>
+                            <h2 id="mainMapZoneManagerTitle">区域管理</h2>
+                        </div>
+                        <button id="mainMapZoneManagerClose" class="merchant-add-close" type="button" aria-label="关闭">×</button>
+                    </header>
+                    <label class="merchant-add-field" for="mainMapZoneManagerName">
+                        区域名称
+                        <input id="mainMapZoneManagerName" type="text" maxlength="40" placeholder="请输入区域名称" required>
+                    </label>
+                    <fieldset class="main-map-zone-status">
+                        <legend>区域状态</legend>
+                        <label class="main-map-zone-status-option main-map-zone-status-access">
+                            <input type="radio" name="mainMapZoneStatus" value="basement-access">
+                            <span><strong>地库可进入</strong><small>绿色显示 · 填充透明度 10%</small></span>
+                        </label>
+                        <label class="main-map-zone-status-option main-map-zone-status-restricted">
+                            <input type="radio" name="mainMapZoneStatus" value="no-cycling">
+                            <span><strong>禁止骑行进入</strong><small>红色显示 · 填充透明度 20%</small></span>
+                        </label>
+                    </fieldset>
+                    <p id="mainMapZoneManagerStatus" class="main-map-zone-manager-status" aria-live="polite"></p>
+                    <div class="main-map-zone-manager-actions">
+                        <button id="mainMapZoneDeleteBtn" class="main-map-zone-delete" type="button">删除区域</button>
+                        <button id="mainMapZoneManagerSave" type="button">保存名称</button>
+                    </div>
+                </div>
+            </section>
+            <!-- 标注弹窗 -->
+            <div id="markPopup" class="popup hidden">
+                <div class="popup-content">
+                    <button id="popupViewPhoto" class="popup-view-photo" type="button" aria-label="全屏查看现场照片" title="全屏查看现场照片" hidden>查看图片</button>
+                    <h4 id="popupTitle"></h4>
+                    <p id="popupDesc"></p >
+                    <div class="popup-actions">
+                        <button id="popupEdit">编辑</button>
+                        <button id="popupDetail" class="detail">详细</button>
+                        <button id="popupClose">关闭</button>
+                    </div>
+                </div>
+            </div>
+            <section id="markDetailDialog" class="mark-detail-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="markDetailTitle">
+                <div class="mark-detail-card">
+                    <header class="mark-detail-header">
+                        <div>
+                            <span class="mark-detail-eyebrow">标注详情</span>
+                            <h2 id="markDetailTitle"></h2>
+                        </div>
+                        <button id="markDetailClose" type="button" aria-label="关闭详情">×</button>
+                    </header>
+                    <div class="mark-detail-info-row">
+                        <p id="markDetailNote" class="mark-detail-note"></p>
+                        <fieldset class="mark-floor-access">
+                            <legend>楼层</legend>
+                            <label class="mark-floor-access-option is-accessible">
+                                <input type="radio" name="markFloorAccess" value="can-enter">
+                                <span>可进入</span>
+                            </label>
+                            <label class="mark-floor-access-option is-restricted">
+                                <input type="radio" name="markFloorAccess" value="restricted-access">
+                                <span>有门禁</span>
+                            </label>
+                        </fieldset>
+                    </div>
+                    <section class="mark-order-history" aria-labelledby="markOrderHistoryTitle">
+                        <header>
+                            <h3 id="markOrderHistoryTitle">每日完单记录</h3>
+                            <button id="markOrderAddToggle" type="button" aria-expanded="false">新增</button>
+                        </header>
+                        <form id="markOrderForm" class="mark-order-form" hidden>
+                            <input id="markOrderRoom" type="text" maxlength="80" placeholder="例如：1栋1901房间" required>
+                            <button type="submit">完成</button>
+                        </form>
+                        <div id="markOrderHistoryList" class="mark-order-history-list" aria-live="polite"></div>
+                    </section>
+                    <footer class="mark-detail-actions">
+                        <a id="markDetailNavigate" class="mark-detail-navigate" href="#">导航</a>
+                        <button id="markDetailDelete" type="button">删除标注</button>
+                    </footer>
+                </div>
+            </section>
+            <!-- 新增标注表单 -->
+            <section id="addMarkForm" class="merchant-add-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="addMarkTitle">
+                <div class="merchant-add-card mark-add-card">
+                    <header class="merchant-add-header">
+                        <div>
+                            <span class="merchant-add-eyebrow">MAP MARK</span>
+                            <h2 id="addMarkTitle">新增标注</h2>
+                        </div>
+                        <button id="markFormClose" class="merchant-add-close" type="button" aria-label="关闭标注表单">×</button>
+                    </header>
+                    <label class="merchant-add-field" for="markName">
+                        标注名称
+                        <input type="text" id="markName" placeholder="名称（小区/楼栋/地址）">
+                    </label>
+                    <label class="merchant-add-field" for="markNote">
+                        备注
+                        <textarea id="markNote" placeholder="备注（门禁/地库/电梯等）" rows="3"></textarea>
+                    </label>
+                    <fieldset class="mark-type-field">
+                        <legend>标注样式</legend>
+                        <div class="mark-type-options">
+                            <label class="mark-type-option">
+                                <input type="radio" name="markType" value="text" checked>
+                                <span>地图文字</span>
+                            </label>
+                            <label class="mark-type-option">
+                                <input type="radio" name="markType" value="pin">
+                                <span>图钉标注</span>
+                            </label>
+                            <label id="markIconTypeOption" class="mark-type-option">
+                                <input type="radio" name="markType" value="icon">
+                                <span>出入图标</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <fieldset id="markIconOptions" class="mark-icon-options" hidden>
+                        <legend>选择地图图标</legend>
+                        <div class="mark-icon-choices">
+                            <label class="mark-icon-choice">
+                                <input type="radio" name="markIcon" value="entrance" checked>
+                                <span><img src="assets/images/kaipingmu-rukou.png" alt="" aria-hidden="true"><small>入口</small></span>
+                            </label>
+                            <label class="mark-icon-choice">
+                                <input type="radio" name="markIcon" value="exit">
+                                <span><img src="assets/images/kaipingmu-palou.svg" alt="" aria-hidden="true"><small>出口</small></span>
+                            </label>
+                            <label class="mark-icon-choice">
+                                <input type="radio" name="markIcon" value="basementEntrance">
+                                <span><img src="assets/images/kaipingmu-basement-parking.png" alt="" aria-hidden="true"><small>地库入口</small></span>
+                            </label>
+                            <label class="mark-icon-choice">
+                                <input type="radio" name="markIcon" value="vehicleStop">
+                                <span><img src="assets/images/kaipingmu-vehicle-parking.png" alt="" aria-hidden="true"><small>车辆可停靠</small></span>
+                            </label>
+                            <label class="mark-icon-choice">
+                                <input type="radio" name="markIcon" value="elevator">
+                                <span><img src="assets/images/kaipingmu-dianti.svg" alt="" aria-hidden="true"><small>电梯</small></span>
+                            </label>
+                            <label class="mark-icon-choice">
+                                <input type="radio" name="markIcon" value="stairs">
+                                <span><img src="assets/images/kaipingmu-image.png" alt="" aria-hidden="true"><small>楼梯</small></span>
+                            </label>
+                            <label class="mark-icon-choice">
+                                <input type="radio" name="markIcon" value="toilet">
+                                <span><img src="assets/images/kaipingmu-cesuo.png" alt="" aria-hidden="true"><small>厕所</small></span>
+                            </label>
+                        </div>
+                        <small class="mark-icon-hint">地图视野高度超过 400 米时自动隐藏图标</small>
+                    </fieldset>
+                    <div class="mark-photo-field">
+                        <span class="mark-photo-label">现场照片</span>
+                        <input type="file" id="markPhoto" accept="image/*" capture="environment" hidden>
+                        <input type="file" id="markPhotoGallery" accept="image/*" hidden>
+                        <div class="mark-photo-actions">
+                            <button id="markPhotoCapture" class="mark-photo-capture" type="button" aria-label="拍照上传现场照片">拍照上传</button>
+                            <button id="markPhotoGalleryBtn" class="mark-photo-gallery" type="button" aria-label="从相册上传现场照片">相册上传</button>
+                        </div>
+                        <div id="markPhotoPreviewWrap" class="mark-photo-preview hidden">
+                            <img id="markPhotoPreview" alt="查看现场照片大图" role="button" tabindex="0">
+                            <button id="markPhotoRemove" type="button">移除照片</button>
+                        </div>
+                    </div>
+                    <div class="merchant-add-actions">
+                        <button id="markCancel" type="button">取消</button>
+                        <button id="markSave" class="mark-save-action" type="button">保存</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div id="page-merchants" class="page">
+            <div id="merchantMapContainer" aria-label="商家分布地图"></div>
+            <div class="merchant-zoom-controls" role="group" aria-label="商家地图缩放">
+                <button id="merchantZoomInBtn" type="button" aria-label="缩小视野高度">+</button>
+                <span id="merchantZoomLevel" aria-live="polite">视野</span>
+                <button id="merchantZoomOutBtn" type="button" aria-label="放大视野高度">−</button>
+            </div>
+            <div class="merchant-search-bar">
+                <button id="merchantCityBtn" class="merchant-city" type="button" aria-label="选择贵阳市区县或街道">
+                    <span class="merchant-city-name">贵阳市</span><span class="merchant-city-disclosure" aria-hidden="true">⌄</span>
+                </button>
+                <span class="merchant-search-divider"></span>
+                <svg class="merchant-search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="10.8" cy="10.8" r="6.3"></circle>
+                    <path d="m16 16 4.2 4.2"></path>
+                </svg>
+                <input id="merchantSearchInput" type="search" placeholder="搜索附近商家" aria-label="搜索附近商家">
+                <button id="merchantSortBtn" class="merchant-sort-btn" type="button" aria-label="商家排序" aria-expanded="false">
+                    <img src="assets/images/assets-shouye.png" alt="" aria-hidden="true">
+                </button>
+                <div id="merchantSortMenu" class="merchant-sort-menu hidden">
+                    <button type="button" data-merchant-sort="popular">按热度排序</button>
+                    <button type="button" data-merchant-sort="price">按单价排序</button>
+                </div>
+            </div>
+            <button id="merchantAddModeBtn" class="merchant-add-mode-btn" type="button" aria-pressed="false">
+                <span class="merchant-add-mode-indicator" aria-hidden="true"></span>
+                <span id="merchantAddModeLabel">添加商家：关闭</span>
+            </button>
+            <button id="placeLabelModeBtn" class="place-label-mode-btn" type="button" aria-pressed="false">
+                <span class="merchant-add-mode-indicator" aria-hidden="true"></span>
+                <span id="placeLabelModeLabel">添加地名：关闭</span>
+            </button>
+            <div id="merchantMapTools" class="zone-draw-controls is-collapsed" role="group" aria-label="地图工具">
+                <button id="drawPolygonBtn" type="button">画多边形</button>
+                <button id="drawRectangleBtn" type="button">画矩形</button>
+                <button id="finishZoneDrawBtn" type="button" disabled>完成绘制</button>
+                <button id="cancelZoneDrawBtn" type="button">取消</button>
+                <button id="merchantMapTypeToggleBtn" class="map-type-toggle merchant-map-type-toggle" type="button" aria-pressed="false" aria-label="切换到卫星地图">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 3v4m0 10v4M3 12h4m10 0h4M7.5 7.5l2.8 2.8m3.4 3.4 2.8 2.8m0-9-2.8 2.8m-3.4 3.4-2.8 2.8" />
+                        <circle cx="12" cy="12" r="4" />
+                    </svg>
+                    <span>卫星</span>
+                </button>
+                <button id="merchantMap3dToggleBtn" class="map-type-toggle merchant-map-type-toggle map-3d-toggle" type="button" aria-pressed="false" aria-label="切换到3D视图">
+                    <span>3D</span>
+                </button>
+                <button id="merchantLocateBtn" class="merchant-locate-btn" type="button" aria-label="定位到当前位置">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2v3m0 14v3M2 12h3m14 0h3" />
+                        <circle cx="12" cy="12" r="7" />
+                        <circle cx="12" cy="12" r="2" />
+                    </svg>
+                    定位
+                </button>
+                <button id="merchantMapToolsCollapseBtn" class="merchant-map-tools-collapse" type="button">收回</button>
+            </div>
+            <button id="merchantMapToolsExpandBtn" class="merchant-map-tools-expand" type="button" aria-expanded="false" aria-controls="merchantMapTools">工具</button>
+            <p id="zoneDrawHint" class="zone-draw-hint" role="status" hidden></p>
+            <div id="merchantSearchResults" class="merchant-search-results" role="list" aria-label="商家标注搜索结果" hidden></div>
+            <article id="merchantDetailCard" class="merchant-detail-card" aria-live="polite" hidden>
+                <div class="merchant-card-handle"></div>
+                <div class="merchant-card-heading">
+                    <div>
+                        <h2 id="merchantName">加载商家中…</h2>
+                        <span id="merchantDistance" class="merchant-distance"></span>
+                    </div>
+                    <button id="merchantFavoriteBtn" class="merchant-favorite-btn" type="button" aria-label="收藏商家" aria-pressed="false">☆</button>
+                </div>
+                <div id="merchantCardRating" class="merchant-card-rating" aria-label="商家评分">
+                    <span class="merchant-card-stars" aria-hidden="true"></span>
+                    <span class="merchant-card-rating-value">暂无评分</span>
+                </div>
+                <div id="merchantBadges" class="merchant-badges"></div>
+                <div id="merchantAvailability" class="merchant-availability"></div>
+                <div class="merchant-card-footer">
+                    <div class="merchant-price">
+                        <strong id="merchantPrice"></strong>
+                        <span id="merchantVipPrice"></span>
+                    </div>
+                    <button id="merchantNavigateBtn" class="merchant-navigate-btn" type="button">➤ 导航去</button>
+                </div>
+            </article>
+            <div id="merchantMapHint" class="merchant-map-hint hidden" role="status">示例商家位置仅用于界面预览</div>
+            <section id="merchantRegionPicker" class="merchant-region-picker hidden" role="dialog" aria-modal="true" aria-labelledby="merchantRegionTitle">
+                <header class="merchant-region-header">
+                    <button id="merchantRegionBack" class="merchant-region-back" type="button" aria-label="返回上一级" disabled>‹</button>
+                    <h2 id="merchantRegionTitle">选择贵阳市区县或街道</h2>
+                    <button id="merchantRegionClose" class="merchant-region-close" type="button" aria-label="关闭地区选择">×</button>
+                </header>
+                <div id="merchantRegionPath" class="merchant-region-path"></div>
+                <p id="merchantRegionStatus" class="merchant-region-status" role="status">正在读取贵阳市行政区和街道…</p>
+                <div id="merchantRegionList" class="merchant-region-list"></div>
+            </section>
+            <section id="merchantAddDialog" class="merchant-add-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="merchantAddTitle">
+                <form id="merchantAddForm" class="merchant-add-card">
+                    <header class="merchant-add-header">
+                        <div>
+                            <span class="merchant-add-eyebrow">NEW MERCHANT</span>
+                            <h2 id="merchantAddTitle">添加商家</h2>
+                        </div>
+                        <button id="merchantAddClose" class="merchant-add-close" type="button" aria-label="关闭">×</button>
+                    </header>
+                    <p id="merchantAddLocation" class="merchant-add-location"></p>
+                    <label class="merchant-add-field" for="merchantAddName">
+                        <span>商家名称</span>
+                        <input id="merchantAddName" type="text" maxlength="50" required placeholder="请输入商家名称">
+                    </label>
+                    <div class="merchant-add-field">
+                        <span>商家图片</span>
+                        <input id="merchantAddPhotoCapture" type="file" accept="image/*" capture="environment" hidden>
+                        <input id="merchantAddPhotoGallery" type="file" accept="image/*" hidden>
+                        <div class="merchant-photo-actions">
+                            <button id="merchantAddPhotoCaptureBtn" class="merchant-photo-select" type="button">拍照上传</button>
+                            <button id="merchantAddPhotoGalleryBtn" class="merchant-photo-select" type="button">相册上传</button>
+                        </div>
+                        <div id="merchantAddPhotoPreviewWrap" class="merchant-photo-preview" hidden>
+                            <img id="merchantAddPhotoPreview" alt="商家图片预览">
+                            <button id="merchantAddPhotoRemove" class="merchant-photo-remove" type="button">移除图片</button>
+                        </div>
+                    </div>
+                    <div class="merchant-add-field">
+                        <span>商家评分</span>
+                        <div id="merchantAddStars" class="merchant-rating-stars" role="group" aria-label="商家评分，最高五分">
+                            <button type="button" data-rating="1" aria-label="1 分">★</button>
+                            <button type="button" data-rating="2" aria-label="2 分">★</button>
+                            <button type="button" data-rating="3" aria-label="3 分">★</button>
+                            <button type="button" data-rating="4" aria-label="4 分">★</button>
+                            <button type="button" data-rating="5" aria-label="5 分">★</button>
+                        </div>
+                        <span id="merchantAddRatingValue" class="merchant-rating-value">未评分</span>
+                    </div>
+                    <label class="merchant-add-field" for="merchantAddNote">
+                        <span>商家备注 <small><b id="merchantAddNoteCount">0</b> / 50</small></span>
+                        <textarea id="merchantAddNote" maxlength="50" rows="3" placeholder="选填，最多50字"></textarea>
+                    </label>
+                    <footer class="merchant-add-actions">
+                        <button id="merchantAddCancel" type="button">取消</button>
+                        <button type="submit">保存商家</button>
+                    </footer>
+                </form>
+            </section>
+            <section id="placeLabelDialog" class="merchant-add-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="placeLabelTitle">
+                <form id="placeLabelForm" class="merchant-add-card">
+                    <header class="merchant-add-header">
+                        <div>
+                            <span class="merchant-add-eyebrow">MAP PLACE LABEL</span>
+                            <h2 id="placeLabelTitle">新增地名</h2>
+                        </div>
+                        <button id="placeLabelClose" class="merchant-add-close" type="button" aria-label="关闭">×</button>
+                    </header>
+                    <p id="placeLabelLocation" class="merchant-add-location"></p>
+                    <label class="merchant-add-field" for="placeLabelLevel">
+                        <span>名称层级</span>
+                        <div class="place-label-level-picker">
+                            <button id="placeLabelLevelButton" class="place-label-level-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+                                <span id="placeLabelLevelValue">省级（如：贵州省）</span>
+                                <span aria-hidden="true">⌄</span>
+                            </button>
+                            <div id="placeLabelLevelOptions" class="place-label-level-options hidden" role="listbox" aria-label="选择名称层级">
+                                <button type="button" role="option" aria-selected="true" data-place-level="province">省级（如：贵州省）</button>
+                                <button type="button" role="option" aria-selected="false" data-place-level="district">区级（如：观山湖区）</button>
+                                <button type="button" role="option" aria-selected="false" data-place-level="street">街道级</button>
+                                <button type="button" role="option" aria-selected="false" data-place-level="community">小区级</button>
+                                <button type="button" role="option" aria-selected="false" data-place-level="building">栋/单元级</button>
+                                <button type="button" role="option" aria-selected="false" data-place-level="floor">楼层级</button>
+                            </div>
+                            <select id="placeLabelLevel" required hidden>
+                            <option value="province">省级（如：贵州省）</option>
+                            <option value="district">区级（如：观山湖区）</option>
+                            <option value="street">街道级</option>
+                            <option value="community">小区级</option>
+                            <option value="building">栋/单元级</option>
+                            <option value="floor">楼层级</option>
+                            </select>
+                        </div>
+                    </label>
+                    <label class="merchant-add-field" for="placeLabelName">
+                        <span>地名</span>
+                        <input id="placeLabelName" type="text" maxlength="40" required placeholder="输入要显示的名称">
+                    </label>
+                    <footer class="merchant-add-actions">
+                        <button id="placeLabelDelete" class="is-danger" type="button" hidden>删除地名</button>
+                        <button id="placeLabelCancel" type="button">取消</button>
+                        <button type="submit">保存地名</button>
+                    </footer>
+                </form>
+            </section>
+            <section id="zoneNameDialog" class="merchant-add-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="zoneNameTitle">
+                <form id="zoneNameForm" class="merchant-add-card">
+                    <header class="merchant-add-header">
+                        <div><span class="merchant-add-eyebrow">NEW COMMUNITY AREA</span><h2 id="zoneNameTitle">命名小区区域</h2></div>
+                        <button id="zoneNameClose" class="zone-name-complete" type="button">完成</button>
+                    </header>
+                    <label class="merchant-add-field" for="zoneNameInput">
+                        <span>区域名称</span>
+                        <input id="zoneNameInput" type="text" maxlength="40" required placeholder="例如：第一城小区">
+                    </label>
+                    <footer class="merchant-add-actions">
+                        <button id="zoneNameCancel" type="button">取消</button>
+                        <button type="submit">保存区域</button>
+                    </footer>
+                </form>
+            </section>
+        </div>
+
+        <!-- 等级录入页 -->
+        <div id="page-level" class="page">
+            <section class="level-entry-card">
+                <header class="level-entry-hero">
+                    <div class="level-entry-emblem" aria-hidden="true">✦</div>
+                    <div class="level-entry-hero-copy">
+                        <span class="level-entry-kicker">RIDER GROWTH · DAILY SCORE</span>
+                        <h1>等级成长档案</h1>
+                        <p>记录每一天的进步，见证你的骑手成长</p>
+                    </div>
+                    <span class="level-entry-hero-orbit" aria-hidden="true"></span>
+                </header>
+                <div class="level-entry-body">
+                    <label class="level-date-field" for="levelDate">
+                        <span class="level-date-icon" aria-hidden="true">◷</span>
+                        <span class="level-date-copy">
+                            <strong>记录日期</strong>
+                            <small>选择本次等级分数所属日期</small>
+                        </span>
+                        <input type="date" id="levelDate">
+                    </label>
+                    <div class="level-scores-heading">
+                        <div>
+                            <h2>今日评分</h2>
+                            <p>填写平台显示的四项分数</p>
+                        </div>
+                        <span>4 项指标</span>
+                    </div>
+                    <div class="level-score-grid">
+                        <label class="level-score-field active-score" for="activeScore">
+                            <span class="level-score-icon"><img src="assets/images/assets-dengji-g1.png" alt=""></span>
+                            <span class="level-score-copy"><strong>活跃分</strong><small>稳定在线 · 持续接单</small></span>
+                            <input type="number" id="activeScore" placeholder="0" min="0" max="160" step="1" inputmode="numeric">
+                        </label>
+                        <label class="level-score-field service-score" for="serviceScore">
+                            <span class="level-score-icon"><img src="assets/images/assets-dengji-g3.png" alt=""></span>
+                            <span class="level-score-copy"><strong>服务分</strong><small>优质服务 · 收获认可</small></span>
+                            <input type="number" id="serviceScore" placeholder="0" min="0" max="160" step="1" inputmode="numeric">
+                        </label>
+                        <label class="level-score-field contribute-score" for="contributeScore">
+                            <span class="level-score-icon"><img src="assets/images/assets-dengji-aq.png" alt=""></span>
+                            <span class="level-score-copy"><strong>贡献分</strong><small>积极参与 · 不断贡献</small></span>
+                            <input type="number" id="contributeScore" placeholder="0" min="0" max="160" step="1" inputmode="numeric">
+                        </label>
+                        <label class="level-score-field safe-score" for="safeScore">
+                            <span class="level-score-icon"><img src="assets/images/assets-dengji-gx.png" alt=""></span>
+                            <span class="level-score-copy"><strong>安全分</strong><small>安全骑行 · 平安每程</small></span>
+                            <input type="number" id="safeScore" placeholder="0" min="0" max="160" step="1" inputmode="numeric">
+                        </label>
+                    </div>
+                    <section class="level-current-card" aria-label="当前等级和段位">
+                        <div class="level-current-main">
+                            <div class="level-current-image">
+                                <img src="assets/images/assets-dengji-wz-g6.png" alt="当前等级徽章">
+                            </div>
+                            <div class="level-current-summary">
+                                <div class="level-current-score">
+                                    <span>当前综合分</span>
+                                    <strong id="levelCurrentScore">--<small> / 160</small></strong>
+                                </div>
+                                <div class="level-result-badge">
+                                    <span>当前等级 · 段位</span>
+                                    <b id="levelCurrentRank">填写分数后显示</b>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="level-tier-list" aria-label="段位分数范围">
+                            <span data-level-tier="青铜">青铜<small>0–70 分</small></span>
+                            <span data-level-tier="白银">白银<small>71–90 分</small></span>
+                            <span data-level-tier="黄金">黄金<small>91–100 分</small></span>
+                            <span data-level-tier="砖石">砖石<small>101–110 分</small></span>
+                            <span data-level-tier="王者">王者<small>111–120 分</small></span>
+                            <span data-level-tier="最强王者">最强王者<small>121–160 分</small></span>
+                        </div>
+                    </section>
+                    <button id="saveLevel" class="level-save-btn" type="button">
+                        <span>保存今日等级</span><span aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </section>
+            <div id="levelResult" class="result-box hidden"></div>
+            <div id="levelChart" class="chart-box"></div>
+        </div>
+
+        <!-- 跑单记录页 -->
+        <div id="page-records" class="page">
+            <section class="record-entry-card">
+                <div class="record-entry-heading">
+                    <span class="record-entry-kicker">DAILY WORK LOG</span>
+                    <p>记录今天的跑单表现</p>
+                </div>
+                <div class="record-date-field">
+                    <label for="recordDate">跑单日期</label>
+                    <input type="date" id="recordDate">
+                </div>
+                <div class="record-metrics-grid">
+                    <label class="record-metric-field orders">
+                        <span class="record-metric-icon" aria-hidden="true">↗</span>
+                        <span class="record-metric-label">完成单量</span>
+                        <span class="record-metric-input">
+                            <input type="number" id="orderCount" placeholder="0" min="0" inputmode="numeric">
+                            <span>单</span>
+                        </span>
+                    </label>
+                    <label class="record-metric-field income">
+                        <span class="record-metric-icon" aria-hidden="true">¥</span>
+                        <span class="record-metric-label">今日收入</span>
+                        <span class="record-metric-input">
+                            <input type="number" id="orderIncome" placeholder="0.00" min="0" step="0.01" inputmode="decimal">
+                            <span>元</span>
+                        </span>
+                    </label>
+                    <label class="record-metric-field hours">
+                        <span class="record-metric-icon" aria-hidden="true">◷</span>
+                        <span class="record-metric-label">在线时长</span>
+                        <span class="record-metric-input">
+                            <input type="number" id="onlineHours" placeholder="0.0" min="0" step="0.1" inputmode="decimal">
+                            <span>小时</span>
+                        </span>
+                    </label>
+                </div>
+                <button id="saveRecord" class="record-save-btn" type="button">
+                    保存今日记录 <span aria-hidden="true">→</span>
+                </button>
+            </section>
+            <section class="record-trend-panel">
+                <div id="recordTrend" class="record-trend-box chart-box"></div>
+            </section>
+            <section class="record-history-panel">
+                <div class="record-history-heading">
+                    <h2>历史记录</h2>
+                    <span>按日期排列</span>
+                </div>
+                <div id="recordList" class="list-box"></div>
+            </section>
+        </div>
+
+        <!-- 标注管理页 -->
+        <div id="page-marks" class="page">
+            <input type="text" id="markSearch" placeholder="搜索标注..." class="search-input">
+            <div class="mark-category-tabs" role="tablist" aria-label="标注类别">
+                <button id="customerMarksTab" class="mark-category-tab active" type="button" role="tab" data-mark-category="customer" aria-selected="true">
+                    顾客 <span id="customerMarkCount">0</span>
+                </button>
+                <button id="merchantMarksTab" class="mark-category-tab" type="button" role="tab" data-mark-category="merchant" aria-selected="false">
+                    商家 <span id="merchantMarkCount">0</span>
+                </button>
+                <button id="zoneMarksTab" class="mark-category-tab" type="button" role="tab" data-mark-category="zones" aria-selected="false">
+                    小区区域 <span id="zoneMarkCount">0</span>
+                </button>
+                <button id="regionStatsTab" class="mark-category-tab" type="button" role="tab" data-mark-category="regionStats" aria-selected="false">
+                    区域统计
+                </button>
+            </div>
+            <div id="marksList" class="list-box"></div>
+        </div>
+
+        <!-- 设置页 -->
+        <div id="page-settings" class="page">
+            <div class="settings-shell">
+                <header class="settings-hero">
+                    <div class="settings-hero-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 0 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 0 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 0 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 0 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 0 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9Z"/></svg>
+                    </div>
+                    <div>
+                        <span class="settings-kicker">PREFERENCES &amp; DATA</span>
+                        <h1>设置</h1>
+                        <p>管理本地数据与应用备份，让每一份记录都安心保存。</p>
+                    </div>
+                </header>
+
+                <section class="settings-storage-card" aria-labelledby="settingsStorageTitle">
+                    <span class="settings-card-icon storage-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></svg>
+                    </span>
+                    <div class="settings-storage-copy">
+                        <h2 id="settingsStorageTitle">本地存储空间</h2>
+                        <p>数据保存在此设备的浏览器中</p>
+                        <strong id="storageInfo" aria-live="polite">计算中...</strong>
+                    </div>
+                    <span class="settings-storage-badge"><i aria-hidden="true"></i>本地保护</span>
+                </section>
+
+                <section class="settings-data-section settings-navigation-section" aria-labelledby="defaultNavigationTitle">
+                    <div class="settings-section-heading">
+                        <span class="settings-card-icon navigation-icon" aria-hidden="true">➤</span>
+                        <div>
+                            <span class="settings-section-eyebrow">ROUTE PREFERENCE</span>
+                            <h2 id="defaultNavigationTitle">默认导航软件</h2>
+                        </div>
+                    </div>
+                    <fieldset class="default-navigation-fieldset">
+                        <legend>点击“开始规划”时打开</legend>
+                        <div class="default-navigation-options">
+                            <label>
+                                <input type="radio" name="defaultNavigationApp" value="amap" checked>
+                                <span>高德地图</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="defaultNavigationApp" value="baidu">
+                                <span>百度地图</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="defaultNavigationApp" value="tencent">
+                                <span>腾讯地图</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </section>
+
+                <section class="settings-data-section" aria-labelledby="settingsDataTitle">
+                    <div class="settings-section-heading">
+                        <span class="settings-card-icon backup-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+                        </span>
+                        <div>
+                            <span class="settings-section-eyebrow">BACKUP &amp; RESTORE</span>
+                            <h2 id="settingsDataTitle">数据备份</h2>
+                        </div>
+                    </div>
+                    <p>导出包含等级、跑单、地图标注、区域网格及照片的 ZIP 完整备份，也可导入 ZIP 或兼容旧版 JSON 备份。</p>
+                    <div class="settings-data-actions">
+                        <button id="exportData" class="settings-action-btn export-action" type="button">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v13m0 0 4.5-4.5M12 16l-4.5-4.5"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+                            <span><strong>导出数据</strong><small>保存一份 ZIP 完整备份</small></span>
+                            <b aria-hidden="true">→</b>
+                        </button>
+                        <button id="importDataBtn" class="settings-action-btn import-action" type="button">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+                            <span><strong>导入数据</strong><small>合并一份或多份备份</small></span>
+                            <b aria-hidden="true">→</b>
+                        </button>
+                        <input id="importDataFile" type="file" accept=".zip,application/zip,.json,application/json" multiple hidden>
+                    </div>
+                    <small id="dataBackupStatus" class="settings-backup-status" role="status" aria-live="polite"></small>
+                    <div class="settings-backup-note">
+                        <span aria-hidden="true">i</span>
+                        <p>导入备份会与本设备数据合并；相同日期、经纬度位置和区域边界由后导入的数据覆盖，其他数据保留。支持同时选择多份 JSON 或 ZIP 备份。</p>
+                    </div>
+                </section>
+
+                <section class="settings-danger-section" aria-labelledby="settingsDangerTitle">
+                    <div class="settings-danger-copy">
+                        <span class="settings-card-icon danger-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg>
+                        </span>
+                        <div>
+                            <h2 id="settingsDangerTitle">数据管理</h2>
+                            <p>清除本设备保存的全部业务记录，此操作不可撤销。</p>
+                        </div>
+                    </div>
+                    <button id="clearData" class="settings-clear-btn" type="button">清空所有数据</button>
+                </section>
+
+                <button id="exitProgramBtn" class="settings-exit-btn" type="button">
+                    <span aria-hidden="true">↗</span>退出程序
+                </button>
+                <p class="settings-footer-note">骑手助手 · 数据仅保存在你的设备中</p>
+                <section class="settings-contact-card" aria-label="客服联系方式">
+                    <h2>客服联系</h2>
+                    <a href="tel:17717346144">电话：17717346144</a>
+                    <p>微信：cenxinglong19980413251</p>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <section id="exportNameDialog" class="merchant-add-dialog hidden export-name-dialog" role="dialog" aria-modal="true" aria-labelledby="exportNameTitle">
+        <form id="exportNameForm" class="merchant-add-card">
+            <header class="merchant-add-header">
+                <div>
+                    <span class="merchant-add-eyebrow">DATA BACKUP</span>
+                    <h2 id="exportNameTitle">命名备份文件</h2>
+                </div>
+                <button id="exportNameClose" class="merchant-add-close" type="button" aria-label="关闭">×</button>
+            </header>
+            <p class="export-name-help">备份将保存为一个包含业务数据和照片的 ZIP 文件。</p>
+            <label class="merchant-add-field" for="exportNameInput">
+                <span>文件名 <small>将保存为 .zip 文件</small></span>
+                <input id="exportNameInput" type="text" maxlength="100" autocomplete="off" required>
+            </label>
+            <small id="exportNameError" class="export-name-error" role="alert" hidden></small>
+            <footer class="merchant-add-actions">
+                <button id="exportNameCancel" type="button">取消</button>
+                <button type="submit">导出备份</button>
+            </footer>
+        </form>
+    </section>
+    <div id="photoViewer" class="photo-viewer hidden" role="dialog" aria-modal="true" aria-label="标注照片">
+        <button id="photoViewerClose" class="photo-viewer-close" type="button" aria-label="关闭照片">×</button>
+        <img id="photoViewerImage" alt="标注照片大图">
+    </div>
+
+    <section id="merchantZoneDialog" class="merchant-zone-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="merchantZoneTitle">
+        <div class="merchant-zone-panel">
+            <header class="merchant-zone-header">
+                <h2 id="merchantZoneTitle">区域商家</h2>
+                <button id="merchantZoneClose" type="button" aria-label="关闭区域商家列表">×</button>
+            </header>
+            <div class="merchant-zone-toolbar">
+                <input id="merchantZoneSearch" type="search" placeholder="搜索商家名称" aria-label="搜索区域商家">
+                <button id="merchantZoneAddMap" type="button">＋ 在地图添加商家</button>
+                <button id="merchantZoneManageGrid" type="button">管理格子</button>
+            </div>
+            <div id="merchantZoneList" class="merchant-zone-list"></div>
+        </div>
+    </section>
+    <div id="merchantMapActionMenu" class="merchant-map-action-menu hidden" role="group" aria-label="商家操作">
+        <strong id="merchantMapActionTitle" class="merchant-map-action-title"></strong>
+        <button type="button" data-action="details">查看详情</button>
+        <button type="button" data-action="locate">定位商家</button>
+        <button type="button" data-action="remove-zone" hidden>从当前区域移除</button>
+        <button type="button" data-action="delete" class="is-danger">删除商家</button>
+    </div>
+    <section id="merchantGridDialog" class="merchant-grid-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="zoneGridTitle">
+        <div class="merchant-grid-panel">
+            <header class="merchant-zone-header">
+                <h2 id="zoneGridTitle">区域商家格子</h2>
+                <button id="merchantGridClose" type="button" aria-label="关闭商家格子">×</button>
+            </header>
+            <div class="merchant-grid-rename">
+                <input id="zoneRenameInput" type="text" maxlength="40" aria-label="修改区域名称">
+                <button id="zoneRenameSave" type="button">改名</button>
+                <button id="zoneDeleteBtn" type="button" class="is-danger">删除区域</button>
+            </div>
+            <p class="merchant-grid-help">点空白格添加商家名称。最多 15 列、5 行。</p>
+            <div id="zoneMerchantGrid" class="zone-merchant-grid"></div>
+            <footer class="merchant-grid-actions">
+                <button id="addZoneColumnBtn" type="button">＋ 添加横排</button>
+                <button id="addZoneRowBtn" type="button">＋ 添加竖排</button>
+            </footer>
+        </div>
+    </section>
+    <section id="merchantFullDetail" class="merchant-full-detail" role="dialog" aria-modal="true" aria-labelledby="merchantFullDetailTitle" hidden>
+        <div class="merchant-full-detail-dialog">
+            <header class="merchant-full-detail-header">
+                <button id="merchantFullDetailClose" class="merchant-full-detail-back" type="button" aria-label="返回">‹</button>
+                <h1 id="merchantFullDetailTitle">商家详情</h1>
+                <span aria-hidden="true"></span>
+            </header>
+            <div class="merchant-full-detail-content">
+                <div class="merchant-full-detail-title-row">
+                    <h2 id="merchantFullDetailName"></h2>
+                    <button id="merchantFullDetailView" class="merchant-full-detail-view" type="button">查看</button>
+                </div>
+                <div class="merchant-rating-field">
+                    <span class="merchant-detail-label">商家评分</span>
+                    <div id="merchantRatingStars" class="merchant-rating-stars" role="group" aria-label="商家评分，最高五分">
+                        <button type="button" data-rating="1" aria-label="1 分">★</button>
+                        <button type="button" data-rating="2" aria-label="2 分">★</button>
+                        <button type="button" data-rating="3" aria-label="3 分">★</button>
+                        <button type="button" data-rating="4" aria-label="4 分">★</button>
+                        <button type="button" data-rating="5" aria-label="5 分">★</button>
+                    </div>
+                    <span id="merchantRatingValue" class="merchant-rating-value">未评分</span>
+                </div>
+                <div class="merchant-rating-field">
+                    <span class="merchant-detail-label">商家图片</span>
+                    <input id="merchantDetailPhoto" type="file" accept="image/*" hidden>
+                    <button id="merchantDetailPhotoBtn" class="merchant-photo-select" type="button">更换商家图片</button>
+                    <div id="merchantDetailPhotoPreviewWrap" class="merchant-photo-preview" hidden>
+                        <button id="merchantDetailPhotoView" class="merchant-photo-view" type="button" aria-label="全屏查看商家图片">
+                            <img id="merchantDetailPhotoPreview" alt="">
+                        </button>
+                        <button id="merchantDetailPhotoRemove" class="merchant-photo-remove" type="button">移除图片</button>
+                    </div>
+                </div>
+                <label class="merchant-note-field" for="merchantFullDetailNote">
+                    <span class="merchant-detail-label">商家备注</span>
+                    <textarea id="merchantFullDetailNote" maxlength="50" rows="5" placeholder="填写商家情况、服务体验等（最多50字）"></textarea>
+                    <span class="merchant-note-count"><b id="merchantNoteCount">0</b> / 50</span>
+                </label>
+            </div>
+            <footer class="merchant-full-detail-footer">
+                <button id="merchantFullDetailSave" class="merchant-detail-save" type="button">保存详情</button>
+            </footer>
+        </div>
+    </section>
+
+    <script src="js/db.js"></script>
+    <script src="js/backup.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
